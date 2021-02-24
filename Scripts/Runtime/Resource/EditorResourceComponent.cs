@@ -557,7 +557,7 @@ namespace UnityGameFramework.Runtime
                 while (current != null && count < m_LoadAssetCountPerFrame)
                 {
                     LoadAssetInfo loadAssetInfo = current.Value;
-                    float elapseSeconds = (float)(DateTime.Now - loadAssetInfo.StartTime).TotalSeconds;
+                    float elapseSeconds = (float)(DateTime.UtcNow - loadAssetInfo.StartTime).TotalSeconds;
                     if (elapseSeconds >= loadAssetInfo.DelaySeconds)
                     {
                         UnityEngine.Object asset = GetCachedAsset(loadAssetInfo.AssetName);
@@ -624,7 +624,7 @@ namespace UnityGameFramework.Runtime
                         {
                             if (loadSceneInfo.LoadSceneCallbacks.LoadSceneSuccessCallback != null)
                             {
-                                loadSceneInfo.LoadSceneCallbacks.LoadSceneSuccessCallback(loadSceneInfo.SceneAssetName, (float)(DateTime.Now - loadSceneInfo.StartTime).TotalSeconds, loadSceneInfo.UserData);
+                                loadSceneInfo.LoadSceneCallbacks.LoadSceneSuccessCallback(loadSceneInfo.SceneAssetName, (float)(DateTime.UtcNow - loadSceneInfo.StartTime).TotalSeconds, loadSceneInfo.UserData);
                             }
                         }
                         else
@@ -813,10 +813,10 @@ namespace UnityGameFramework.Runtime
         /// </summary>
         /// <param name="versionListLength">版本资源列表大小。</param>
         /// <param name="versionListHashCode">版本资源列表哈希值。</param>
-        /// <param name="versionListZipLength">版本资源列表压缩后大小。</param>
-        /// <param name="versionListZipHashCode">版本资源列表压缩后哈希值。</param>
+        /// <param name="versionListCompressedLength">版本资源列表压缩后大小。</param>
+        /// <param name="versionListCompressedHashCode">版本资源列表压缩后哈希值。</param>
         /// <param name="updateVersionListCallbacks">版本资源列表更新回调函数集。</param>
-        public void UpdateVersionList(int versionListLength, int versionListHashCode, int versionListZipLength, int versionListZipHashCode, UpdateVersionListCallbacks updateVersionListCallbacks)
+        public void UpdateVersionList(int versionListLength, int versionListHashCode, int versionListCompressedLength, int versionListCompressedHashCode, UpdateVersionListCallbacks updateVersionListCallbacks)
         {
             throw new NotSupportedException("UpdateVersionList");
         }
@@ -884,7 +884,10 @@ namespace UnityGameFramework.Runtime
                 return HasAssetResult.NotExist;
             }
 
-            return obj.GetType() == typeof(UnityEditor.DefaultAsset) ? HasAssetResult.BinaryOnDisk : HasAssetResult.AssetOnDisk;
+            HasAssetResult result = obj.GetType() == typeof(UnityEditor.DefaultAsset) ? HasAssetResult.BinaryOnDisk : HasAssetResult.AssetOnDisk;
+            obj = null;
+            UnityEditor.EditorUtility.UnloadUnusedAssetsImmediate();
+            return result;
 #else
             return HasAssetResult.NotExist;
 #endif
@@ -1015,7 +1018,7 @@ namespace UnityGameFramework.Runtime
                 return;
             }
 
-            m_LoadAssetInfos.AddLast(new LoadAssetInfo(assetName, assetType, priority, DateTime.Now, m_MinLoadAssetRandomDelaySeconds + (float)Utility.Random.GetRandomDouble() * (m_MaxLoadAssetRandomDelaySeconds - m_MinLoadAssetRandomDelaySeconds), loadAssetCallbacks, userData));
+            m_LoadAssetInfos.AddLast(new LoadAssetInfo(assetName, assetType, priority, DateTime.UtcNow, m_MinLoadAssetRandomDelaySeconds + (float)Utility.Random.GetRandomDouble() * (m_MaxLoadAssetRandomDelaySeconds - m_MinLoadAssetRandomDelaySeconds), loadAssetCallbacks, userData));
         }
 
         /// <summary>
@@ -1114,7 +1117,7 @@ namespace UnityGameFramework.Runtime
                 return;
             }
 
-            m_LoadSceneInfos.AddLast(new LoadSceneInfo(asyncOperation, sceneAssetName, priority, DateTime.Now, loadSceneCallbacks, userData));
+            m_LoadSceneInfos.AddLast(new LoadSceneInfo(asyncOperation, sceneAssetName, priority, DateTime.UtcNow, loadSceneCallbacks, userData));
         }
 
         /// <summary>
@@ -1527,7 +1530,7 @@ namespace UnityGameFramework.Runtime
 
             if (assetFullName != fileFullName)
             {
-                if (assetFullName.ToLower() == fileFullName.ToLower())
+                if (assetFullName.ToLowerInvariant() == fileFullName.ToLowerInvariant())
                 {
                     Log.Warning("The real path of the specific asset '{0}' is '{1}'. Check the case of letters in the path.", assetName, "Assets" + fileFullName.Substring(Application.dataPath.Length));
                 }
